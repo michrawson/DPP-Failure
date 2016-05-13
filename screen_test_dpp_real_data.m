@@ -1,5 +1,26 @@
+close all
+clear all
 
 tic
+
+A_all = readtable('/Users/mich/OBDA/HW2/pulmon/features.csv','Delimiter',',');
+[observations, predictors] = size(A_all);
+A_all = A_all(:,8:predictors);
+A_all = table2array(A_all);
+[observations, predictors] = size(A_all);
+y = A_all(:,352);
+y = y/norm(y,2);
+% y = y/max(abs(y));
+
+A = A_all(:,[1:352-1, 352+1:predictors]);
+A = [A(:,:), ones(observations,1)];
+[observations, predictors] = size(A);
+for j = 1:predictors
+    A(:,j) = A(:,j)/norm(A(:,j),2);
+%     A(:,j) = A(:,j)/max(abs(A(:,j)));
+end
+
+return
 
 lambda_max = abs(A(:,1)'*y);
 for feature = 2:predictors
@@ -12,8 +33,7 @@ dpp_feature_keep_length = zeros(0);
 edpp_feature_keep_length = zeros(0);
 tru_pred_length = zeros(0);
 
-% lambda = 1.0/10^6;
-lambda = 1.0/10^8;
+lambda = 1.0/10^7;
 
 lambdas = zeros(0);
 
@@ -21,8 +41,8 @@ fail_grid1 = zeros(10,10);
 fail_grid2 = zeros(10,10);
 for lambda_counter = 1:10
     lambda = lambda/10;
-%     lambda = 1.0/5^(2+lambda_counter-1+10);
     lambdas = [lambdas; lambda];
+%     lambda = lambda + 0.01*3^lambda_counter
 
     cvx_begin quiet
         cvx_precision best
@@ -49,17 +69,15 @@ for lambda_counter = 1:10
 
 %     tru_pred;
 %     est(tru_pred);
-    
+
+%     lambda_prime_factor = 1.001;
+
     lambda_prime_factors = zeros(0);
 
     for counter = 1:10
 
-        lambda_prime_factor = 1.0001 + 0.01*(counter-1);
-        
+        lambda_prime_factor = 1.00001 + 0.05*(counter-1);
 %         lambda_prime_factor = 1+ 1/10^(counter+3);
-        
-%         lambda_prime_factor = 1.+1./10.^(10+4-counter+1);
-        
         lambda_prime_factors = [lambda_prime_factors; lambda_prime_factor];
         lambda_prime = lambda*lambda_prime_factor;
         
@@ -73,8 +91,6 @@ for lambda_counter = 1:10
             minimize( 1.0/2.0*pow_pos(norm(A*est_prime - y, 2),2) ...
                 + lambda_prime * norm(est_prime,1))
         cvx_end
-        
-        norm(A*est_prime-y,2)
         
         if isnan(est_prime)
             isnan(est_prime)
@@ -100,10 +116,10 @@ for lambda_counter = 1:10
             
             if length(feature_keep) > 0
                 fail_grid1(lambda_counter,counter)=...
-                    getScreenFailCount((feature_keep), tru_pred)...
+                    getScreenFailCount(sort(feature_keep), tru_pred)...
                     /length(tru_pred);
             else
-                fail_grid1(lambda_counter,counter)=1;                
+                fail_grid1(lambda_counter,counter)=1;
             end
 %             lambda;
 %             edpp_feature_keep_length;
@@ -111,10 +127,10 @@ for lambda_counter = 1:10
         end
 
         feature_keep = zeros(0);
-        for feature = 1:predictors            
-            if abs(A(:,feature)'*(y-A*est_prime))/lambda_prime >= 1 ...
+        for feature = 1:predictors
+            if abs(A(:,feature)'*(y-A*est_prime)) >= lambda_prime ...
                     - norm(A(:,feature),2) * norm(y,2) ...
-                    * (lambda_prime-lambda)/(lambda*lambda_prime)
+                    * (lambda_prime-lambda)/lambda
                 feature_keep = [feature_keep; feature];
             end
         end
@@ -123,21 +139,15 @@ for lambda_counter = 1:10
         if checkScreen(feature_keep, tru_pred)
         else
             'Fail dpp'
-            
-            if length(feature_keep) > 0
-                fail_grid2(lambda_counter,counter)=...
-                    getScreenFailCount((feature_keep), tru_pred)...
-                    /length(tru_pred);
-            else
-                fail_grid2(lambda_counter,counter)=1;                
-            end
-            
-%             fail_grid2(lambda_counter,counter)=1;
+            fail_grid2(lambda_counter,counter)=1;
 
 %             feature_keep;
         end
+
     end
 end
+
+% lambda_max
 
 fail_grid1
 fail_grid2
@@ -149,9 +159,7 @@ c.Label.String = 'Percent of relevant predictors discarded';
 title('EDPP Failure Region')
 ylabel('\lambda')
 xlabel('\lambda'' /\lambda')
-% xlabel('log(\lambda'' /\lambda-1)')
-set(gca,'YTickLabel',lambdas)
 set(gca,'XTickLabel',lambda_prime_factors)
-% set(gca,'XTickLabel',round(log(lambda_prime_factors-1)))
+set(gca,'YTickLabel',lambdas)
 
 toc
