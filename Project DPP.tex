@@ -10,7 +10,7 @@
 \begin{document}
 \begin{center}
 \Large
-DPP Failure\\
+Sparse Regression Screening Dual Polytope Projection Failure\\
 \normalsize
 ~\\
 Michael Rawson\\
@@ -18,11 +18,16 @@ Michael Rawson\\
 Advisor: Prof. Carlos Fernandez-Granda
 \end{center}
 
+\begin{abstract}
+Sparse regression screening with dual polytope projection (DPP) is an iterative process for computational efficiency. While the math is sound, using limited precision iteratively is hazardous, for example using double floating point precision in a computer. In analysis, synthetic data experiments, and real data experiments, we show DPP screening failure regions.
+\end{abstract}
+
 \subsection*{Introduction}
 \subsubsection*{Regression}
-\qquad ~ Regression methods are a set of techniques used to infer information about systems from collected data. They are commonly used in engineering, science, and statistics. Linear regression creates a linear model to analyze the relationship between predictors and the sample values (\ref{eq:reg}). If $n=p$ then a hyperplane through the data is calculated, if $A$ is full rank. If $n>p$ then often the $L_2$ norm of the difference is minimized, $\min_{x\in \mathbf R^p} \|Ax-y\|_2$. If $n<p$ then, from Gaussian elimination, the solution has infinite solutions, if $A$ is full rank. 
+\qquad ~ Regression methods are a set of techniques used to infer information about systems from collected data. They are commonly used in engineering, science, and statistics. Linear regression creates a linear model to analyze the relationship between predictors and the sample values (\ref{eq:reg}). If $n=p$ then a hyperplane through the data is calculated, if $A$ is full rank. If $n>p$ then often the $L_2$ norm of the difference is minimized, $\min_{x\in \mathbb{R}^p} \|Ax-y\|_2$. If $n<p$ then, from Gaussian elimination, the solution has infinite solutions, if $A$ is full rank. 
 
 \begin{equation} \label{eq:reg}
+A ~x =
 \begin{bmatrix}
     a_{11}       & a_{12} & \dots & a_{1p} \\
     a_{21}       & a_{22} & \dots & a_{2p} \\
@@ -41,6 +46,7 @@ Advisor: Prof. Carlos Fernandez-Granda
     \vdots \\
     y_{n}
 \end{bmatrix}
+= y
 \end{equation}
 where $a_{ij}$ is the value of predictor $i$ for sample $j$\\
 and $x_i$ is the weight for predictor $i$\\
@@ -49,26 +55,26 @@ and $y_i$ is the $i^{th}$ sample value\\
 \quad Regularization is often used in data analysis to simplify a complex model and to avoid over-fitting. Overfitting happens when a model learns not just the underlying signal, but the noise too. If there is no noise, then a linear interpolation could be directly applied, to a linear problem. Ridge Regression dampens $x$ by regularizing the $L_2$ norm of $x$ in the objective function (\ref{eq:ridge}). 
 
 \begin{equation} \label{eq:ridge}
-\min_{x\in R^p} \|Ax-y\|_2^2 + \lambda \|x\|_2^2
+\min_{x\in \mathbb{R}^p} \|Ax-y\|_2^2 + \lambda \|x\|_2^2
 \end{equation}
-where $\lambda$ is a hyper-parameter.\\
+where $\lambda>0$ is a hyper-parameter.\\
 
-\quad Sometimes there is reason to believe that the relevant predictors to the sample value should be sparse. In order to find a sparse solution, often the $L_1$ norm of $x$ is also minimized in the objective function. The least absolute shrinkage and selection operator (LASSO) adds the weighted $L_1$ norm of $x$ (\ref{eq:lasso}). 
+\quad Often there is reason to believe that the relevant predictors to the sample value should be sparse. In order to find a sparse solution, often the $L_1$ norm of $x$ is also minimized in the objective function. The least absolute shrinkage and selection operator (LASSO) adds the weighted $L_1$ norm of $x$ to the objective function (\ref{eq:lasso}). 
 
 \begin{equation} \label{eq:lasso}
-\min_{x\in R^p} \|Ax-y\|_2^2 + \lambda \|x\|_1
+\min_{x\in \mathbb{R}^p} \|Ax-y\|_2^2 + \lambda \|x\|_1
 \end{equation}
-where $\lambda$ is a hyper-parameter.\\
+where $\lambda>0$ is a hyper-parameter.\\
 
 However, if predictors are identical, then the LASSO problem doesn't have a unique solution. There are infinite solutions. This does not achieve the objective of learning about the relationship between the predictors and data. Strongly correlated predictors similarly create non-unique solutions due to limited machine precision. One way to avoid this uniqueness problem is to use an objective function that penalizes both the $L_1$ norm and $L_2$ norm of $x$, know as the Elastic Net (\ref{eq:enet}).
 
 \begin{equation} \label{eq:enet}
-\min_{x\in R^p} \|Ax-y\|_2^2 + \lambda_1 \|x\|_1 + \lambda_2 \|x\|_2^2
+\min_{x\in \mathbb{R}^p} \|Ax-y\|_2^2 + \lambda_1 \|x\|_1 + \lambda_2 \|x\|_2^2
 \end{equation}
-where $\lambda_1$ and $\lambda_2$ are hyper-parameters.\\
+where $\lambda_1>0$ and $\lambda_2>0$ are hyper-parameters.\\
 
 \subsubsection*{Screening}
-\qquad ~ For large datasets, where the samples and/or predictors are large, computing time becomes a limitation. In order to be more computationally efficient many screening methods have been designed. Screening methods remove predictors ahead of optimizing the objective function, allowing practitioners to solve systems with many more predictors. Two types of screening methods are the safe methods and the heuristic methods. The safe methods guarantee to not discard an important predictor. The heuristic methods might discard important predictors, though post-processing can be employed to identify and correct failures. The strong rule \cite{strong} is an unsafe method that discards all predictors that satisfy (\ref{eq:strong}). 
+\qquad ~ For large datasets, where the samples and/or predictors are large, computing time becomes a limitation. In order to be more computationally efficient many, screening methods have been designed. Screening methods remove predictors ahead of optimizing the objective function, allowing practitioners to solve systems with many more predictors. Two types of screening methods are the safe methods and the heuristic methods. The safe methods guarantee to not discard an important predictor. The heuristic methods might discard important predictors, though post-processing can be employed to identify and correct failures. The strong rule \cite{strong} is an unsafe method that discards all predictors that satisfy (\ref{eq:strong}). 
 
 \begin{equation} \label{eq:strong}
 |a_j^T (y - Ax(\lambda'))| < 2\lambda - \lambda'
@@ -95,9 +101,9 @@ Start with the dual problem:
 \begin{equation} \label{eq:dual}
 \theta^*(\lambda)=\texttt{argsup}_\theta \left\{\frac 12 \|y\|_2^2 - \frac {\lambda^2}{2}\left\|\theta-\frac{y}{\lambda}\right\|_2^2 : |a^T_i \theta|\le 1, i = 1,2,...,p \right\}
 \end{equation}
-KKT conditions give:
+The Karush-Kuhn-Tucker (KKT) conditions give:
 $$ y = A\beta^{*}(\lambda) + \lambda\theta^*(\lambda) $$
-where $ \beta^{*}(\lambda) $ is the solution of Eq. \ref{eq:lasso}.\\
+where $ \beta^{*}(\lambda) $ is the solution of Eq. (\ref{eq:lasso}).\\
 With some relaxation, $\sup_{\theta\in\Theta}|a_i^T\theta|<1$ implies an inactive feature/predictor $i$.\\
 \\
 The dual optimal solution can be expressed with a projection operator $P_F$ to the feasible set of Eq. (\ref{eq:dual}) by:
@@ -131,8 +137,8 @@ There are `global' versions of DPP rules that use $\lambda_{max}$ but we won't c
 
 Let $0<\lambda<\lambda'$ \\
 Let the features/predictors, $a_j$, and response, $y$ be normalized. $\|a_j\|_2=1$ and $\|y\|_2=1$\\
-Let $x$ be the solution for $\lambda'$ and assume we only have access to an approximation, $x+\epsilon$ for $\epsilon\in \mathbf R^p$ and $0<|\epsilon_i|<<1$. \\
-Then for $\lambda'$ we have $\|Ax-y\|_2>0$ and let $A(x+\epsilon)-y = \delta \in \mathbf R^p$ and $0<|\delta_i|<<1$
+Let $x$ be the solution for $\lambda'$ and assume we only have access to an approximation, $x+\epsilon$ for $\epsilon\in \mathbb{R}^p$ and $0<|\epsilon_i|<<1$. \\
+Then for $\lambda'$ we have $\|Ax-y\|_2>0$ and let $A(x+\epsilon)-y = \delta \in \mathbb{R}^p$ and $0<|\delta_i|<<1$
 
 \subsubsection*{DPP Failure}
 We examine the failure of the DPP rules.\\
@@ -202,7 +208,7 @@ Then, in the limit, the rule always evaluates true and does not safely discard p
 
 \subsubsection*{Synthetic Data}
 
-\qquad ~ We experiment with DPP and EDPP on synthetic data. We use a random Gaussian i.i.d. matrix, $A\in R^{100 \times 500}$, and a random Gaussian i.i.d. sparse signal vector, $x\in R^{500}$ and $\|\texttt{sign}(x)\|_1=100$. We compute the product, $y$, normalize predictors, $a_j$, and response, $y$, and then solve the inverse problem with LASSO to reconstruct the scaled, sparse signal $x$. We utilize a high precision optimizer set to continue as long as it can make progress. However, the result is still limited by double precision. We find and record where DPP and EDPP fails to safely discard predictors for a neighborhood of $\lambda$ and $\lambda'$. See Fig. \ref{fig:DPP_fail} for DPP and Fig. \ref{fig:EDPP_fail} for EDPP. We notice that the failure region for EDPP is much larger than DPP, which is not surprising since EDPP is a tighter bound than DPP. We also notice that the neighborhood of complete failure is not necessarily bordered by a neighborhood of complete success. This is not surprising since, for each predictor, the rules depends on the dot product with predictors, $a_j$, and since these vary, on the boundary, we expect some to cross while others do not. This explains the partial failure around the neighborhood of complete failure. 
+\qquad ~ We experiment with DPP and EDPP on synthetic data. We use a random Gaussian i.i.d. matrix, $A\in \mathbb{R}^{100 \times 500}$, and a random Gaussian i.i.d. sparse signal vector, $x\in \mathbb{R}^{500}$ and $\|\texttt{sign}(x)\|_1=100$. We compute the product, $y$, normalize predictors, $a_j$, and response, $y$, and then solve the inverse problem with LASSO to reconstruct the scaled, sparse signal $x$. We utilize a high precision optimizer set to continue as long as it can make progress. However, the result is still limited by double precision. We find and record where DPP and EDPP fails to safely discard predictors for a neighborhood of $\lambda$ and $\lambda'$. See Fig. \ref{fig:DPP_fail} for DPP and Fig. \ref{fig:EDPP_fail} for EDPP. We notice that the failure region for EDPP is much larger than DPP, which is not surprising since EDPP is a tighter bound than DPP. We also notice that the neighborhood of complete failure is not necessarily bordered by a neighborhood of complete success. This is not surprising since, for each predictor, the rules depends on the dot product with predictors, $a_j$, and since these vary, on the boundary, we expect some to cross while others do not. This explains the partial failure around the neighborhood of complete failure. 
 
 \begin{figure}
     \centering
